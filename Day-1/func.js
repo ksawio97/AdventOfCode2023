@@ -107,6 +107,9 @@ exports.getSum2 = (path) => {
             if (found[0] && found[1])
                 break;
         }
+        //get last num doesn't reach first character
+        if (found[1] != found[0] && found[0])
+            sum += sum / 10;
         return sum;
     });
     //sum them together
