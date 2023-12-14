@@ -1,5 +1,6 @@
 const fs = require('fs');
 const MyRange = require('./MyRange');
+const Group = require('./Group');
 
 /**
  * 
@@ -18,9 +19,16 @@ const convertStrNumSeq = (numSeq) => numSeq.split(' ').map((seed) => Number(seed
 /**
  * converts '0 15 37\n39 0 15' to [[0, 15, 37], [39, 0, 15]]
  * @param {[string]} groups 
- * @returns {[[number]]}
+ * @returns {[[Group]]}
  */
-const convertGroupsToNumSeq = (groups) => groups.map((group) => group[0].split('\n').map((groupFragment) => convertStrNumSeq(groupFragment)));
+const putGroupsToGroupClasses = (groups) => groups
+    //split groups
+    .map((group) => group[0].split('\n')
+    //convert group to numbers
+    .map((groupFragment) => convertStrNumSeq(groupFragment))
+    //create Group instances
+    .map((groupFragmentRule) => new Group(groupFragmentRule[0], new MyRange(groupFragmentRule[1], groupFragmentRule[1] + groupFragmentRule[2]))));
+    
 
 /**
  * 
@@ -73,7 +81,7 @@ const getSeedsRanges = (data) => {
 
     const seedsRanges = [];
     for (let i = 0; i < seedsNums.length; i += 2) {
-        seedsRanges.push(new MyRange(seedsNums[i], [seedsNums[i] + seedsNums[i + 1]]))
+        seedsRanges.push(new MyRange(seedsNums[i], seedsNums[i] + seedsNums[i + 1]))
     }
     return seedsRanges;
 }
@@ -86,9 +94,9 @@ const getSeedsRanges = (data) => {
 exports.part2 = (path) => {
     const data = loadData(path);
 
-    let unhandledSeedsRanges = getSeedsRanges(data);
-    const groupsPattern = /([\d ]+\r?\n)+.+/gm;
-    const groups = convertGroupsToNumSeq([...data.matchAll(groupsPattern)]);
+    const unhandledSeedsRanges = getSeedsRanges(data);
     
+    const groupsPattern = /([\d ]+\r?\n)+.+/gm;
+    const groups = putGroupsToGroupClasses([...data.matchAll(groupsPattern)]);
     return 1;
 }
