@@ -16,24 +16,44 @@ class Group {
     /**
      * 
      * @param {MyRange} externalRange 
-     * @returns {MyRange|undefined}
+     * @returns {[[MyRange], [MyRange]]} returns handled and unhandled MyRange
      */
-    elementsInGroup = (externalRange) => {
+    handleElements = (externalRange) => {
         const isStartInRange = this.#groupRange.isNumInRange(externalRange.start);
         const isEndInRange = this.#groupRange.isNumInRange(externalRange.end);
+
+        const difference = this.#destinationStart - this.#groupRange.start;
+        const handled = [];
+        const unhandled = [];
+
         //externalRange start and end is inside group
         if (isStartInRange && isEndInRange)
-            return new MyRange(externalRange.start, externalRange.end);
+        {
+            handled.push(new MyRange(externalRange.start + difference, externalRange.end + difference));
+        }
         //externalRange start is inside group
-        else if (isStartInRange) 
-            return new MyRange(externalRange.start, this.#groupRange.end);
+        else if (isStartInRange) {
+            unhandled.push(new MyRange(this.#groupRange.end + 1, externalRange.end));
+
+            handled.push(new MyRange(externalRange.start + difference, this.#groupRange.end + difference));
+        }
         //externalRange end is inside group
-        else if (isEndInRange)
-            return new MyRange(this.#groupRange.start, externalRange.end);
+        else if (isEndInRange) {
+            unhandled.push(new MyRange(externalRange.start, this.#groupRange.start - 1));
+
+            handled.push(new MyRange(this.#groupRange.start + difference, externalRange.end + difference));
+        }
         //group is inside externalRange
-        else if (externalRange.start < this.#groupRange.start && this.#groupRange.end < externalRange.end)
-            return new MyRange(this.#groupRange.start, this.#groupRange.end);
-        return undefined;
+        else if (externalRange.start < this.#groupRange.start && this.#groupRange.end < externalRange.end) {
+            unhandled.push(new MyRange(this.#groupRange.end + 1, externalRange.end));
+            unhandled.push(new MyRange(externalRange.start, this.#groupRange.start - 1));
+
+            handled.push(new MyRange(this.#groupRange.start + difference, this.#groupRange.end + difference));
+        }
+
+        if (handled.length == 0)
+            unhandled.push(externalRange);
+        return [handled, unhandled];
     }
 }
 

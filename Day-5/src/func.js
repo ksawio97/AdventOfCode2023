@@ -87,7 +87,6 @@ exports.part2 = (path) => {
     const data = loadData(path);
 
     let unhandledSeedsRanges = getSeedsRanges(data);
-    console.log(unhandledSeedsRanges);
     const groupsPattern = /([\d ]+\r?\n)+.+/gm;
     const groups = convertGroupsToNumSeq([...data.matchAll(groupsPattern)]);
     
