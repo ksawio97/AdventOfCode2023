@@ -16,19 +16,13 @@ const loadData = (path) => fs.readFileSync(path, 'utf-8');
  */
 const convertStrNumSeq = (numSeq) => numSeq.split(' ').map((seed) => Number(seed));
 
+
 /**
  * converts '0 15 37\n39 0 15' to [[0, 15, 37], [39, 0, 15]]
  * @param {[string]} groups 
- * @returns {[[Group]]}
+ * @returns {[[number]]}
  */
-const putGroupsToGroupClasses = (groups) => groups
-    //split groups
-    .map((group) => group[0].split('\n')
-    //convert group to numbers
-    .map((groupFragment) => convertStrNumSeq(groupFragment))
-    //create Group instances
-    .map((groupFragmentRule) => new Group(groupFragmentRule[0], new MyRange(groupFragmentRule[1], groupFragmentRule[1] + groupFragmentRule[2]))));
-    
+const convertGroupsToNumSeq = (groups) => groups.map((group) => group[0].split('\n').map((groupFragment) => convertStrNumSeq(groupFragment)));
 
 /**
  * 
@@ -87,6 +81,14 @@ const getSeedsRanges = (data) => {
 }
 
 /**
+ * converts '0 15 37\n39 0 15' to [[0, 15, 37], [39, 0, 15]]
+ * @param {[string]} groups 
+ * @returns {[[Group]]}
+ */
+const putGroupsToGroupClasses = (groups) => convertGroupsToNumSeq(groups).map((group) => group
+    .map((groupFragmentRule) => new Group(groupFragmentRule[0], new MyRange(groupFragmentRule[1], groupFragmentRule[1] + groupFragmentRule[2]))));
+
+/**
  * 
  * @param {string} path
  * @returns {number} 
@@ -98,5 +100,29 @@ exports.part2 = (path) => {
     
     const groupsPattern = /([\d ]+\r?\n)+.+/gm;
     const groups = putGroupsToGroupClasses([...data.matchAll(groupsPattern)]);
-    return 1;
+
+    const handledSeedsRanges = [];
+    groups.forEach((group) => {
+        while (unhandledSeedsRanges.length > 0) {
+            const currSeedsRanges = [unhandledSeedsRanges[0]];
+            const nextSeedsRanges = [];
+            unhandledSeedsRanges.splice(0, 1);
+            group.forEach((groupFragment) => {
+                currSeedsRanges.forEach((currentSeedRange) => {
+                    const [handled, unhandled] = groupFragment.handleElements(currentSeedRange);
+
+                    handledSeedsRanges.push(...handled);
+                    nextSeedsRanges.push(...unhandled);
+                });
+                currSeedsRanges.splice(0, currSeedsRanges.length);
+                currSeedsRanges.push(...nextSeedsRanges);
+                nextSeedsRanges.splice(0, nextSeedsRanges.length);
+            });
+            handledSeedsRanges.push(...currSeedsRanges);
+            currSeedsRanges.splice(0, currSeedsRanges.length);
+        }
+        unhandledSeedsRanges.push(...handledSeedsRanges);
+        handledSeedsRanges.splice(0, handledSeedsRanges.length);
+    });
+    return Math.min(...unhandledSeedsRanges.map((range) => range.start));
 }
