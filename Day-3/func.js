@@ -1,4 +1,5 @@
 const fs = require('fs');
+
 /**
  * 
  * @param {string} path 
@@ -22,72 +23,77 @@ const isEmpty = (node) => node == '.';
 
 /**
  * 
- * @param {string} line 
- * @param {number} start 
- * @param {number} end 
+ * @returns {function(string): [[string, number]]} returns function that returns array of match num and found index
  */
-const checkRowForValidationNodes = (line, start, end) => {
-    for(let i = start; i <= end; i++)
-        if (!isNum(line[i]) && !isEmpty(line[i])) 
-            return true;  
+const getPotentialNumsInLineFabric = () => {
+    const findNumsRegex = /(?<=\.|^)\d+(?=\.|$)/g;
+    return (line) => [...line.matchAll(findNumsRegex)].map((match) => [match[0], match.index]);
+};
 
+/**
+ * 
+ * @param {[string]} lines 
+ */
+const checkLinesForSpecialChars = (lines) => {
+    for (const line of lines)
+        for (const node of line)
+            //if node is a special char
+            if (!isNum(node) && !isEmpty(node))
+                return true;
     return false;
 }
 
 /**
  * 
  * @param {[string]} lines 
- * @param {number} row 
- * @param {number} startCol 
- * @param {number} endCol 
- * @returns {boolean}
+ * @returns {number}
  */
-const checkIfNodesValid = (lines, row, startCol, endCol) => {
-    const validStart = (num) => num == 0 ? num : num - 1;
-    const validEnd = (num, max) => max == num ? num : num + 1;
-
-    let validStartRow = validStart(row);
-    const validEndRow = validEnd(row, lines.length - 1);
-    const validStartCol = validStart(startCol);
-    const validEndCol = validEnd(endCol, lines[validStartRow].length - 1);
-    for (; validStartRow <= validEndRow; validStartRow++) {
-        if (checkRowForValidationNodes(lines[validStartRow], validStartCol, validEndCol))
-            return true;
-    }
-
-    return false;
+const sumEasyValidNums = (lines) => {
+    //matches non . or non digit nodes before num and after
+    const regex = /(?<!^|\.|\d)\d+|\d+(?!\d|\.|$)/g;
+    let sum = 0;
+    lines.forEach((line) => {
+        const easyMatches = [...line.matchAll(regex)]
+            .map((match) => Number(match[0]));
+        //sum current easyMatches and add to sum
+        sum += easyMatches.reduce((previous, current) => previous + current, 0);
+    });
+    return sum;
 }
-
-
 /**
  * 
  * @param {string} path 
  * @returns {number}
  */
 exports.part1 = (path) => {
-    const lines = loadLines(path).map((line) => line.replaceAll('\r', ''));
-    let sum = 0;
-    for (let row = 0; row < lines.length; row++) {
-        let scanStart = -1;
-        for (let col = 0; col < lines[row].length; col++) {
-            const isNumber = isNum(lines[row][col]);
-            //if it's number and scanning haven't started
-            if (isNumber && scanStart == -1)
-            {
-                scanStart = col;
-            }
-            //add collected number and empty it if it's valid
-            if ((!isNumber || col === lines[row].length - 1) && scanStart != -1) {
-                if (checkIfNodesValid(lines, row, scanStart, col - 1)) {
-                    if (col === lines[row].length - 1 && isNum(lines[col]))
-                        sum += Number(lines[row].slice(scanStart, col + 1));
-                    else
-                        sum += Number(lines[row].slice(scanStart, col));     
+    const lines = loadLines(path);
+
+    let sum = sumEasyValidNums(lines);
+    const getPotentialNumsInLine = getPotentialNumsInLineFabric();
+    lines.forEach((line, lineIndex) => {
+        const potentialNums = getPotentialNumsInLine(line);
+        potentialNums.forEach(([matchedNum, startIndex]) => {
+            const linesToCheck = [];
+            //add line below
+            if (lineIndex > 0)
+                linesToCheck.push(lines[lineIndex - 1]);
+            //add line above
+            if (lineIndex < lines.length - 1)
+                linesToCheck.push(lines[lineIndex + 1]);
+            //cut line to get strings to check
+            const toCheck = linesToCheck.map((lineToCheck) => {
+                let subsStart = startIndex - 1;
+                let subsLength = matchedNum.length + ((startIndex + matchedNum.length === lineToCheck.length) ? 1 : 2);
+                if (startIndex === 0) {
+                    subsStart++;
+                    subsLength--;
                 }
-                    
-                scanStart = -1;
-            }
-        }
-    }
+                return lineToCheck.substring(subsStart, subsStart + subsLength)
+            });
+
+            if (checkLinesForSpecialChars(toCheck))
+                sum += Number(matchedNum); 
+        });
+    });
     return sum;
 }
