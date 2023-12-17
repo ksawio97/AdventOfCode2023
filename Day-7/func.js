@@ -5,7 +5,7 @@ const fs = require('fs');
  * @param {string} path 
  * @returns {Array<[string, number]>} returns hands with their bids
  */
-const readFileForData = (path) => fs.readFileSync(path, 'utf-8').split('\n').map((line) => line.split(' ')).map(([hand, bid]) => [convertHandCardsToNumbers(hand), Number(bid)]);
+const readFileForData = (path) => fs.readFileSync(path, 'utf-8').split('\n').map((line) => line.split(' '));
 
 /**
  * 
@@ -103,15 +103,13 @@ exports.getSortedIndexesByHand = (numsHandsWithIndexes) => {
 
     return sortedIndexes;
 } 
-/**
- * 
- * @param {string} path 
- * @returns {number}
- */
-exports.part1 = (path) => {
-    const handsWithBids = readFileForData(path);
-    const cardsGroupedByType = groupIndexesByCardTypes(handsWithBids.map(([hand, bid], index) =>  [getHandsTypeRank(hand), index]));
 
+/**
+ * @param {Array<[number[], number]>} handsWithBids
+ * @param {Map<number, number[]>} cardsGroupedByType 
+ * @returns 
+ */
+const partCore = (handsWithBids, cardsGroupedByType) => {
     const sortedCardsByRankDesc = [...cardsGroupedByType.entries()].sort((a, b) => b[0] - a[0]).map(([rank, indexes]) => indexes);
 
     let ranksLeft = handsWithBids.length;
@@ -130,4 +128,83 @@ exports.part1 = (path) => {
     });
 
     return result;
+}
+/**
+ * 
+ * @param {string} path 
+ * @returns {number}
+ */
+exports.part1 = (path) => {
+    const handsWithBids = readFileForData(path).map(([hand, bid]) => [convertHandCardsToNumbers(hand), Number(bid)]);
+    const cardsGroupedByType = groupIndexesByCardTypes(handsWithBids.map(([hand, bid], index) =>  [getHandsTypeRank(hand), index]));
+    return partCore(handsWithBids, cardsGroupedByType);
 };
+
+/**
+ * 
+ * @param {string} hand 
+ * @returns {number}
+ */
+const getHandsTypeRank2 = (hand) => {
+    const countedCards = new Map();
+    for (const card of hand)
+        countedCards.set(card, (countedCards.has(card) ? countedCards.get(card) : 0) + 1);
+
+    //0 is a J
+    const jCount = countedCards.get(0) === undefined ? 0 : countedCards.get(0);
+    countedCards.delete(0);
+    const countedCardsValues = [...countedCards.values()].sort((a, b) => b - a);
+
+    switch (countedCardsValues.length) {
+        //Five of a kind
+        case 0:
+        case 1:
+            return 6;
+        case 2: 
+            //Four of a kind
+            if (countedCardsValues[0] + jCount === 4)
+                return 5;
+            //Full house
+            if (countedCardsValues[0] + jCount === 3)
+                return 4;
+            break;
+        case 3:
+            //Three of a kind
+            if (countedCardsValues[0] + jCount === 3)
+                return 3;
+            //Two pair
+            if (countedCardsValues[0] === 2 && countedCardsValues[1] === 2)
+                return 2;
+            break;
+        case 4:
+            //One pair
+            if (countedCardsValues[0] + jCount === 2)
+                return 1;
+            break;
+        case 5:
+            //High card
+            return 0;
+    }
+    return -1;
+};
+
+/**
+ * 
+ * @param {string} cards 
+ * @returns {Array<number>}
+ */
+const convertHandCardsToNumbers2 = (hand) => {
+    const pool = "J23456789TQKA";
+    return [...hand].map((card) => pool.indexOf(card));
+}
+/**
+ * 
+ * @param {string} path 
+ * @returns {number}
+ */
+exports.part2 = (path) => {
+    const handsWithBids = readFileForData(path).map(([hand, bid]) => [convertHandCardsToNumbers2(hand), Number(bid)]);
+    const cardsGroupedByType = groupIndexesByCardTypes(handsWithBids.map(([hand, bid], index) =>  [getHandsTypeRank2(hand), index]));
+
+    return partCore(handsWithBids, cardsGroupedByType);
+}
