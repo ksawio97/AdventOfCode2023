@@ -24,6 +24,17 @@ const parseData1 = (lines) => {
 
     return [instructions, nodes];
 }
+
+const partCore = (currentNode, instructions, nodes, isNodeValid) => {
+    let stepsCount = 0;
+    while (!isNodeValid(currentNode))
+    {
+        const option = instructions[stepsCount++ % instructions.length];
+        currentNode = nodes.get(currentNode)[option];
+    }
+    return stepsCount;
+}
+
 /**
  * 
  * @param {string} path 
@@ -31,15 +42,7 @@ const parseData1 = (lines) => {
  */
 exports.part1 = (path) => {
     const [instructions, nodes] = parseData1(readFileData(path));
-
-    let currentNode = 'AAA';
-    let stepsCount = 0;
-    while (currentNode !== 'ZZZ')
-    {
-        const option = instructions[stepsCount++ % instructions.length];
-        currentNode = nodes.get(currentNode)[option];
-    }
-    return stepsCount;
+    return partCore('AAA', instructions, nodes, (currentNode) => currentNode === 'ZZZ');
 }
 
 /**
@@ -69,18 +72,19 @@ const parseData2 = (lines) => {
     return [instructions, startNodesKeys, endNodesKeys, nodes];
 }
 
-/**
- * 
- * @param {string[]} currentNodesKeys 
- * @param {string[]} destinationNodesKeys 
- * @returns {boolean}
- */
-const allNodesReachedDestination = (currentNodesKeys, destinationNodesKeys) => {
-    for (const currentNodeKey of currentNodesKeys)
-        if (!(destinationNodesKeys.includes(currentNodeKey)))
-            return false;
-
-    return true;
+function gcd(a, b) {
+    if (b === 0) {
+        return a;
+    }
+    return gcd(b, a % b);
+}
+  
+function lcm(a, b) {
+    return (a * b) / gcd(a, b);
+}
+  
+function findLCM(arr) {
+    return arr.reduce((a, b) => lcm(a, b), 1);
 }
 
 /**
@@ -91,12 +95,7 @@ const allNodesReachedDestination = (currentNodesKeys, destinationNodesKeys) => {
 exports.part2 = (path) => {
     const [instructions, startNodesKeys, endNodesKeys, nodes] = parseData2(readFileData(path));
 
-    let stepsCount = 0;
-    for (; !allNodesReachedDestination(startNodesKeys, endNodesKeys); stepsCount++)
-    {       
-        const option = instructions[stepsCount % instructions.length];
-        for (let i = 0; i < startNodesKeys.length; i++)
-            startNodesKeys[i] = nodes.get(startNodesKeys[i])[option];
-    }
-    return stepsCount;
+    const reachTimes = startNodesKeys.map((startNodeKey) => partCore(startNodeKey, instructions, nodes, (currentNode) => endNodesKeys.includes(currentNode)));
+    
+    return findLCM(reachTimes);
 }
