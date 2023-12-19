@@ -21,79 +21,78 @@ const isNum = (node) => node >= '0' && node <= '9';
  */
 const isEmpty = (node) => node == '.';
 
-/**
- * 
- * @returns {function(string): [[string, number]]} returns function that returns array of match num and found index
- */
-const getPotentialNumsInLineFabric = () => {
-    const findNumsRegex = /(?<=\.|^)\d+(?=\.|$)/g;
-    return (line) => [...line.matchAll(findNumsRegex)].map((match) => [match[0], match.index]);
-};
+const isSymbol = (node) => !isNum(node) && !isEmpty(node);
 
 /**
  * 
- * @param {[string]} lines 
+ * @param {Array<string>} lines 
+ * @param {number} numStart 
+ * @param {number} numEnd 
+ * @param {number} row 
+ * @returns {boolean}
  */
-const checkLinesForSpecialChars = (lines) => {
-    for (const line of lines)
-        for (const node of line)
-            //if node is a special char
-            if (!isNum(node) && !isEmpty(node))
-                return true;
+const checkIfNumIsValid = (lines, numStart, numEnd, row) => {
+    //check node before number
+    if (numStart !== 0)
+    {
+        numStart -= 1;
+        if (isSymbol(lines[row][numStart]))
+            return true;
+    }
+    
+    //check node after number
+    if (numEnd !== lines[row].length - 1)
+    {
+        numEnd += 1;
+        if (isSymbol(lines[row][numEnd]))
+            return true;
+    }
+
+    //check line above
+    if (row !== 0)
+        if (![...lines[row - 1].substring(numStart, numEnd + 1)].every((char) => !isSymbol(char)))
+            return true;
+
+    //check line below
+    if (row !== lines.length - 1)
+        if (![...lines[row + 1].substring(numStart, numEnd + 1)].every((char) => !isSymbol(char)))
+            return true;
+        
     return false;
 }
 
-/**
- * 
- * @param {[string]} lines 
- * @returns {number}
- */
-const sumEasyValidNums = (lines) => {
-    //matches non . or non digit nodes before num and after
-    const regex = /(?<!^|\.|\d)\d+|\d+(?!\d|\.|$)/g;
-    let sum = 0;
-    lines.forEach((line) => {
-        const easyMatches = [...line.matchAll(regex)]
-            .map((match) => Number(match[0]));
-        //sum current easyMatches and add to sum
-        sum += easyMatches.reduce((previous, current) => previous + current, 0);
-    });
-    return sum;
-}
+
 /**
  * 
  * @param {string} path 
  * @returns {number}
  */
-exports.part1 = (path) => {
+const part1 = (path) => {
     const lines = loadLines(path);
 
-    let sum = sumEasyValidNums(lines);
-    const getPotentialNumsInLine = getPotentialNumsInLineFabric();
-    lines.forEach((line, lineIndex) => {
-        const potentialNums = getPotentialNumsInLine(line);
-        potentialNums.forEach(([matchedNum, startIndex]) => {
-            const linesToCheck = [];
-            //add line below
-            if (lineIndex > 0)
-                linesToCheck.push(lines[lineIndex - 1]);
-            //add line above
-            if (lineIndex < lines.length - 1)
-                linesToCheck.push(lines[lineIndex + 1]);
-            //cut line to get strings to check
-            const toCheck = linesToCheck.map((lineToCheck) => {
-                let subsStart = startIndex - 1;
-                let subsLength = matchedNum.length + ((startIndex + matchedNum.length === lineToCheck.length) ? 1 : 2);
-                if (startIndex === 0) {
-                    subsStart++;
-                    subsLength--;
+    let sum = 0;
+    for (let row = 0; row < lines.length; row++)
+    {
+        let numberStartCol = -1;
+        for (let col = 0; col < lines[row].length; col++)
+        {
+            if (isNum(lines[row][col]))
+            { 
+                if (numberStartCol === -1)
+                    numberStartCol = col;
+            }
+            else {
+                if (numberStartCol !== -1 && checkIfNumIsValid(lines, numberStartCol, col - 1, row)) {
+                    sum += Number(lines[row].substring(numberStartCol, col));
                 }
-                return lineToCheck.substring(subsStart, subsStart + subsLength)
-            });
-
-            if (checkLinesForSpecialChars(toCheck))
-                sum += Number(matchedNum); 
-        });
-    });
+                    
+                numberStartCol = -1
+            }
+        }
+        if (numberStartCol !== -1 && checkIfNumIsValid(lines, numberStartCol, lines[row].length - 1, row))
+            sum += Number(lines[row].substring(numberStartCol, lines[row].length - 1));
+    }
     return sum;
 }
+
+module.exports = {part1, checkIfNumIsValid}
