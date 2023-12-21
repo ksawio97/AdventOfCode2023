@@ -90,7 +90,7 @@ const part1 = (path) => {
             }
         }
         if (numberStartCol !== -1 && checkIfNumIsValid(lines, numberStartCol, lines[row].length - 1, row))
-            sum += Number(lines[row].substring(numberStartCol, lines[row].length - 1));
+            sum += Number(lines[row].substring(numberStartCol, lines[row].length));
     }
     return sum;
 }
