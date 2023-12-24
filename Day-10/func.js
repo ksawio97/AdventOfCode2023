@@ -109,13 +109,129 @@ const part1 = (path) => {
     const direction = findValidDirectionAround(nodes, currPos);
     do {
         steps++;
+
         currPos[0] += direction[0];
         currPos[1] += direction[1];
+
         setDirection(direction, getNextDirectionIfPossible(nodes[currPos[1]][currPos[0]], direction));
-    }
-    while (!(direction[0] === 0 && direction[1] === 0))
+    } while (!(direction[0] === 0 && direction[1] === 0))
 
     return steps / 2;
 }
 
-module.exports = {part1}
+/**
+ * 
+ * @param {[number, number][]} positions 
+ * @returns {[[number, number], [number, number]]} [smallest pos, biggest pos]
+ */
+const findSmallestAndBiggestPositions = (positions) => {
+    let [smallestX, smallestY, biggestX, biggestY] = [Infinity, Infinity, -Infinity, -Infinity];
+
+    positions.forEach(([x, y]) => {
+        if (smallestX > x)
+            smallestX = x;
+        if (biggestX < x)
+            biggestX = x;
+        if (smallestY > y)
+            smallestY = y;
+        if (biggestY < y)
+            biggestY = y;
+    });
+
+    return [[smallestX, smallestY], [biggestX, biggestY]];
+}
+
+/**
+ * 
+ * @param {string} row
+ * @returns {number[]} 
+ */
+const findGapsInRow = (row) => [...row.matchAll(/\.+/g)].map((match) => match.index);
+
+/**
+ * 
+ * @param {string[]} nodes
+ * @param {number} column
+ * @returns {number[]} 
+ */
+const findGapsInColumn = (nodes, column) => findGapsInRow(nodes.map((nodeLine) => nodeLine[column]).join('')).map((y) => [column, y]);
+
+/**
+ * 
+ * @param {string[]} nodes 
+ * @param {[number, number]} pos 
+ * @param {Set<string>} checked
+ * @returns {number}
+ */
+const checkAdjentNodes = (nodes, [x, y], checked) => {
+    const currItemKey = JSON.stringify([x, y]);
+    if (nodes[y][x] !== '.' || checked.has(currItemKey))
+        return 0;
+    checked.add(currItemKey);
+
+    let count = 1;
+    if (x > 0)
+        count += checkAdjentNodes(nodes, [x - 1, y], checked);
+    if (x < nodes[y].length - 1)
+        count += checkAdjentNodes(nodes, [x + 1, y], checked);
+    if (y > 0)
+        count += checkAdjentNodes(nodes, [x, y - 1], checked);
+    if (y < nodes.length - 1)
+        count += checkAdjentNodes(nodes, [x, y + 1], checked);
+    return count;
+}
+/**
+ * @param {string[]} nodes
+ * @returns {number}
+ */
+const countOpenDots = (nodes) => {
+    //get gaps starts from rows and columns (set and array from points filters them in order to be distinct)
+    const checkPoints = Array.from(new Set([
+        ...findGapsInRow(nodes[0]).map((x) => [x, 0]),
+        ...findGapsInRow(nodes[nodes.length - 1]).map((x) => [x, nodes.length - 1]),
+        ...findGapsInColumn(nodes, 0),
+        ...findGapsInColumn(nodes, nodes[0].length - 1)
+    ].map(JSON.stringify))).map(JSON.parse)
+
+    let count = 0;
+    const checked = new Set();
+    for (const checkPoint of checkPoints)
+        count += checkAdjentNodes(nodes, checkPoint, checked);
+    return count;
+}
+/**
+ * 
+ * @param {string} path 
+ * @returns {number}
+ */
+const part2 = (path) => {
+    const nodes = readData(path);
+    const currPos = findStartPos(nodes);
+
+    const positions = [];
+    const addPosToPositions = () => {
+        const toAdd = [0, 0];
+        setDirection(toAdd, currPos)
+        positions.push(toAdd);
+    }
+
+    const direction = findValidDirectionAround(nodes, currPos);
+    do {
+        addPosToPositions();
+
+        currPos[0] += direction[0];
+        currPos[1] += direction[1];
+
+        setDirection(direction, getNextDirectionIfPossible(nodes[currPos[1]][currPos[0]], direction));
+    } while (!(direction[0] === 0 && direction[1] === 0));
+
+    const [smallest, biggest] = findSmallestAndBiggestPositions(positions);
+    const nodesChunk = nodes.splice(smallest[1], biggest[1] - smallest[1] + 1).map((nodeRow) => nodeRow.substring(smallest[0], biggest[0] + 1));
+
+    const dotsCount = nodesChunk.reduce((acc, curr) => acc + [...curr.matchAll(/\./g)].length, 0);
+    const openDotsCount = countOpenDots(nodesChunk);
+
+    return dotsCount - openDotsCount;
+}
+
+module.exports = {part1, part2}
